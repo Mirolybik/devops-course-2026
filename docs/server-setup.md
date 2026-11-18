@@ -61,3 +61,45 @@
 | 01-clean-install | после установки ОС, apt upgrade, выключения командой poweroff |
 | 02-keys-configured | после настройки ключевой аутентификации и ~/.ssh/config |
 | 03-ssh-hardened | после усиления защиты SSH, смены порта и проверки с отдельного терминала |
+| 04-nginx-https | после настройки Nginx, HTTPS и самоподписанного сертификата (работа № 6) |
+| 05-docker-compose | после запуска проекта Docker Compose (работа № 7) |
+
+## 8. Веб-сервер
+
+- Устанавливаемый пакет: nginx 1.24.0-2ubuntu7.2 (apt).
+- Конфигурация ресурса: /etc/nginx/sites-available/devops-site, включена
+  символической ссылкой в /etc/nginx/sites-enabled/; файл
+  /etc/nginx/sites-enabled/default удалён.
+- Каталог ресурса: /var/www/devops-site, владелец devops:devops,
+  права каталогов 755, файлов 644.
+- Сертификат: /etc/ssl/certs/devops.crt, владелец root:root, права 644,
+  CN=devops.local, SAN DNS:devops.local, срок действия 365 дней.
+- Ключ: /etc/ssl/private/devops.key, владелец root:root, права 600.
+- Формирование сертификата:
+  sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/private/devops.key \
+    -out /etc/ssl/certs/devops.crt \
+    -subj "/CN=devops.local" \
+    -addext "subjectAltName=DNS:devops.local"
+- Применение конфигурации: sudo nginx -t && sudo systemctl reload nginx.
+- Проверка: curl --cacert ~/devops.crt -I https://devops.local.
+
+## 9. Контейнеризация
+
+- Docker Engine 28.5.1 установлен из официального репозитория Docker
+  (пакет docker-ce), плагин Docker Compose v2.40.3.
+- Группа docker: участник devops (учётная запись с правом sudo).
+- Проект: /home/devops/app, доставляется rsync из каталога app/
+  репозитория с исключением .env.
+- Файл .env: /home/devops/app/.env, владелец devops:devops, права 600;
+  в репозитории отсутствует, шаблон - app/.env.example.
+- Порты: 127.0.0.1:5000 -> 5000/tcp (приложение); порт 5432 не публикуется.
+- Именованный том: app_db_data, каталог /var/lib/postgresql/data, СУБД
+  postgres:16-alpine.
+- Сеть проекта: app_backend (bridge), сервис db разрешается по имени db.
+- Обратный прокси-сервер: location /app/ в
+  /etc/nginx/sites-available/devops-site,
+  proxy_pass http://127.0.0.1:5000/.
+- Запуск: docker compose up -d; остановка: docker compose stop app.
+- Восстановление: cd ~/app && cp .env.example .env &&
+  chmod 600 .env, затем docker compose up -d --build.
