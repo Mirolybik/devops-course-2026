@@ -4,6 +4,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
+ENV PORT=8001
 USER app
-EXPOSE 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--access-logfile", "-", "app:app"]
+EXPOSE 8001
+CMD ["python", "app.py"]
