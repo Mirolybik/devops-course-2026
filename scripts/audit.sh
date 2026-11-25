@@ -64,5 +64,18 @@ check "Порты 5000 и 5432 не прослушиваются вне 127.0.0.
       "$(ss -tln | awk '$4 ~ /:(5000|5432)$/ && $4 !~ /^127\.0\.0\.1:/ {print $4}' | wc -l)" "0"
 check "Права файла ~/app/.env равны 600" "$(stat -c '%a' ~/app/.env)" "600"
 
+echo "[6] Контрольная работа №2"
+check "Контейнер сервиса redis находится в состоянии healthy" \
+      "$(docker compose --project-directory ~/kr2 ps -q redis \
+         | xargs -r docker inspect -f '{{.State.Health.Status}}')" "healthy"
+check "Порт 8001 опубликован только на 127.0.0.1" \
+      "$(docker compose --project-directory ~/kr2 port app 8001)" "127.0.0.1:8001"
+check "Права файла ~/kr2/.env равны 600" "$(stat -c '%a' ~/kr2/.env)" "600"
+check "Сертификат /etc/ssl/certs/kr2.crt действует не менее 30 дней" \
+      "$(openssl x509 -checkend 2592000 -noout \
+         -in /etc/ssl/certs/kr2.crt >/dev/null 2>&1; echo $?)" "0"
+check "Ресурс kr2 активирован" "yes" \
+      "$([ -L /etc/nginx/sites-enabled/kr2 ] && echo yes || echo no)"
+
 echo "Пройдено проверок: $PASS, не пройдено: $FAIL"
 [[ $FAIL -eq 0 ]] && exit 0 || exit 1
