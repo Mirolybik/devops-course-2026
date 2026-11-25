@@ -1,18 +1,21 @@
+# KR2: Mkhitarov
 import os
+import socket
 
-import psycopg2
-from flask import Flask
+import redis
+from flask import Flask, request
 
 app = Flask(__name__)
 
+STUDENT = os.getenv("STUDENT", "Mkhitarov")
+PORT = int(os.getenv("PORT", "8001"))
 
-def get_connection():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        dbname=os.getenv("POSTGRES_DB", "app"),
-        user=os.getenv("POSTGRES_USER", "app"),
-        password=os.getenv("POSTGRES_PASSWORD", "app"),
-    )
+r = redis.Redis(
+    host=os.getenv("REDIS_HOST", "redis"),
+    port=int(os.getenv("REDIS_PORT", "6379")),
+    password=os.getenv("REDIS_PASSWORD") or None,
+    decode_responses=True,
+)
 
 
 @app.route("/health")
@@ -22,20 +25,19 @@ def health():
 
 @app.route("/")
 def index():
-    conn = get_connection()
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                "CREATE TABLE IF NOT EXISTS visits ("
-                "id SERIAL PRIMARY KEY, visited_at TIMESTAMP DEFAULT now())"
-            )
-            cur.execute("INSERT INTO visits DEFAULT VALUES")
-            cur.execute("SELECT count(*) FROM visits")
-            count = cur.fetchone()[0]
-    finally:
-        conn.close()
-    return f"Hello from Docker, Мхитаров! Visits: {count}\n"
+    hits = r.incr("hits")
+    cid = socket.gethostname()
+    return f"KR2 | {STUDENT} | container {cid} | hits: {hits}\n"
+
+
+@app.route("/whoami")
+def whoami():
+    return (
+        f"scheme: {request.headers.get('X-Forwarded-Proto', request.scheme)}\n"
+        f"client: {request.headers.get('X-Real-IP', request.remote_addr)}\n"
+        f"host: {request.headers.get('Host', '')}\n"
+    )
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=PORT)
