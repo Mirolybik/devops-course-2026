@@ -1,0 +1,14 @@
+site_name: DevOps Operations Handbook
+site_description: Учебная документация по проверке и публикации изменений
+site_author: "Мхитаров Иван Александрович"
+repo_name: Mirolybik/devops-course-2026
+repo_url: https://github.com/Mirolybik/devops-course-2026
+
+theme:
+  name: mkdocs
+  locale: ru
+
+nav:
+  - Главная: index.md
+  - Эксплуатация: runbook.md
+  - Журнал инцидентов: incidents.md
